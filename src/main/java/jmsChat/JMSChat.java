@@ -4,9 +4,11 @@ import java.io.File;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
+import javax.jms.DeliveryMode;
 import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.MessageConsumer;
+import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.StreamMessage;
 import javax.jms.TextMessage;
@@ -14,6 +16,8 @@ import javax.jms.TextMessage;
 import org.apache.activemq.ActiveMQConnectionFactory;
 
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -23,9 +27,11 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
@@ -38,6 +44,8 @@ import javafx.stage.Stage;
 
 @SuppressWarnings("unused")
 public class JMSChat extends Application{
+	
+	private MessageProducer messageProducer;
 
 	public static void main(String[] args) {
 		Application.launch(JMSChat.class);
@@ -95,6 +103,8 @@ public class JMSChat extends Application{
 		gridPane.setVgap(10);
 		gridPane.setHgap(10);
 		HBox hBoxCenter = new HBox();
+		hBoxCenter.setPadding(new Insets(40));
+		hBoxCenter.setSpacing(20);
 		vBox.getChildren().add(gridPane);
 		vBox.getChildren().add(hBoxCenter);
 		pane.setCenter(vBox);
@@ -125,10 +135,42 @@ public class JMSChat extends Application{
 		gridPane.add(comboBoxImages, 1, 2);
 		gridPane.add(sendImageButton, 2	,2);
 		
+		ObservableList<String> observableListMessages = FXCollections.observableArrayList();
+		ListView<String> listView = new ListView<>(observableListMessages);
+		
+		File selectedImageFile = new File("images/"+comboBoxImages.getSelectionModel().getSelectedItem());
+		Image image = new Image(selectedImageFile.toURI().toString());
+		ImageView imageView = new ImageView(image);
+		imageView.setFitWidth(500);
+		imageView.setFitHeight(300);
+		
+		hBoxCenter.getChildren().add(listView);
+		hBoxCenter.getChildren().add(imageView);
+		
 		Scene scene = new Scene(pane,850,600);
 		primaryStage.setScene(scene);
 		primaryStage.getIcons().add(new Image("chatMessage.png"));
-		primaryStage.show(); 
+		primaryStage.show();
+		
+		
+		sendButton.setOnAction(new EventHandler<ActionEvent>() {
+
+			@Override
+			public void handle(ActionEvent event) {
+				
+				
+			}
+			
+		});
+		
+		comboBoxImages.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
+
+			@Override
+			public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+				imageView.setImage(new Image(new File("images/"+newValue).toURI().toString()));
+			}
+			
+		});
 		
 		connectionButton.setOnAction(new EventHandler<ActionEvent>() {
 
@@ -144,6 +186,8 @@ public class JMSChat extends Application{
 					Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 					Destination destination = session.createTopic("lyes.topic");
 					MessageConsumer messageConsumer = session.createConsumer(destination);
+					messageProducer = session.createProducer(destination);
+					messageProducer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
 					messageConsumer.setMessageListener(message -> {
 						if(message instanceof TextMessage) {
 							try {
@@ -159,10 +203,8 @@ public class JMSChat extends Application{
 					labelStatus.setText("Connected to the server");
 				} catch (JMSException e) {
 					e.printStackTrace();
-				}
-				
+				}	
 			}
-			
 		});
 	}
 
