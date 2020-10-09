@@ -46,7 +46,10 @@ import javafx.stage.Stage;
 public class JMSChat extends Application{
 	
 	private MessageProducer messageProducer;
-
+	private Session session;
+	private String codeUser;
+	private TextField textFieldTo;
+	
 	public static void main(String[] args) {
 		Application.launch(JMSChat.class);
 	}
@@ -110,7 +113,7 @@ public class JMSChat extends Application{
 		pane.setCenter(vBox);
 		
 		Label labelTo = new Label("To");
-		TextField textFieldTo = new TextField("C1");
+		textFieldTo = new TextField("C1");
 		textFieldTo.setPrefWidth(350);
 		textFieldTo.setPromptText("Message to ...");
 		Label labelMessage = new Label("Message");
@@ -158,6 +161,17 @@ public class JMSChat extends Application{
 			@Override
 			public void handle(ActionEvent event) {
 				
+				try {
+					if(textAreaMessage.getText() != " " && textAreaMessage.getText().length() > 0 ) {
+						TextMessage textMessage = session.createTextMessage();
+						textMessage.setText(textAreaMessage.getText());
+						textMessage.setStringProperty("code", textFieldTo.getText());
+						messageProducer.send(textMessage); 
+						textAreaMessage.clear();
+					}
+				} catch (JMSException e) {
+					e.printStackTrace();
+				}
 				
 			}
 			
@@ -176,23 +190,23 @@ public class JMSChat extends Application{
 
 			@Override
 			public void handle(ActionEvent event) {
-				String codeUser = textFieldCode.getText();
+				codeUser = textFieldCode.getText();
 				String host = textFieldHost.getText();
 				int port = Integer.parseInt(textFieldPort.getText());
 				ConnectionFactory cf = new ActiveMQConnectionFactory("tcp://"+host+":"+port);
 				try {
 					Connection connection = cf.createConnection();
 					connection.start(); // important, to be able to recieve messages
-					Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+					session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 					Destination destination = session.createTopic("lyes.topic");
-					MessageConsumer messageConsumer = session.createConsumer(destination);
+					MessageConsumer messageConsumer = session.createConsumer(destination, "code='"+codeUser+"'");
 					messageProducer = session.createProducer(destination);
 					messageProducer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
 					messageConsumer.setMessageListener(message -> {
 						if(message instanceof TextMessage) {
 							try {
 								TextMessage textMessage = (TextMessage) message;
-								System.out.println(textMessage.getText());
+								observableListMessages.add(textMessage.getText());
 							} catch (JMSException e) {
 								e.printStackTrace();
 							}
@@ -201,6 +215,7 @@ public class JMSChat extends Application{
 						}
 					});
 					labelStatus.setText("Connected to the server");
+					hBox.setDisable(true);
 				} catch (JMSException e) {
 					e.printStackTrace();
 				}	
