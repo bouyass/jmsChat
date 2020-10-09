@@ -1,6 +1,10 @@
 package jmsChat;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
@@ -156,6 +160,29 @@ public class JMSChat extends Application{
 		primaryStage.show();
 		
 		
+		sendImageButton.setOnAction(new EventHandler<ActionEvent>() {
+
+			@Override
+			public void handle(ActionEvent event) {
+				try {
+					StreamMessage streamMessage = session.createStreamMessage();
+					File f = new File("images/"+comboBoxImages.getSelectionModel().getSelectedItem());
+					FileInputStream fis = new FileInputStream(f);
+					byte[] data = new byte[(int) f.length()];
+					fis.read(data);
+					streamMessage.writeString(comboBoxImages.getSelectionModel().getSelectedItem());
+					streamMessage.writeInt(data.length);
+					streamMessage.writeBytes(data);
+					streamMessage.setStringProperty("code", textFieldTo.getText());
+					messageProducer.send(streamMessage);
+				} catch (  JMSException | IOException e) {
+					e.printStackTrace();
+				}
+				
+			}
+			
+		});
+		
 		sendButton.setOnAction(new EventHandler<ActionEvent>() {
 
 			@Override
@@ -211,6 +238,20 @@ public class JMSChat extends Application{
 								e.printStackTrace();
 							}
 						}else if(message instanceof StreamMessage) {
+							try {
+								StreamMessage streamMessage = (StreamMessage) message;
+								String pictureName = streamMessage.readString();
+								int pictureSize = streamMessage.readInt();
+								observableListMessages.add("Recieved picture "+ pictureName);
+								byte[] data = new byte[pictureSize];
+								streamMessage.readBytes(data);
+								ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(data);
+								Image image = new Image(byteArrayInputStream);
+								imageView.setImage(image);
+							} catch (JMSException e) {
+
+								e.printStackTrace();
+							}
 							
 						}
 					});
