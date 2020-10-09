@@ -173,8 +173,21 @@ public class JMSChat extends Application{
 					streamMessage.writeString(comboBoxImages.getSelectionModel().getSelectedItem());
 					streamMessage.writeInt(data.length);
 					streamMessage.writeBytes(data);
-					streamMessage.setStringProperty("code", textFieldTo.getText());
-					messageProducer.send(streamMessage);
+					if(textFieldTo.getText().length() > 0 && textAreaMessage.getText() != " ") {
+						String[] recievers = textFieldTo.getText().split(";");
+						System.out.println(" length "+recievers.length);
+						if(recievers.length > 1) {
+							for(int i = 0; i<recievers.length;i++) {
+								streamMessage.setStringProperty("code", recievers[i].trim());
+								messageProducer.send(streamMessage);
+							}
+						}else {
+							streamMessage.setStringProperty("code", textFieldTo.getText());
+							messageProducer.send(streamMessage);
+						}
+					}else {
+						labelStatus.setText("Select a reciever");
+					}
 				} catch (  JMSException | IOException e) {
 					e.printStackTrace();
 				}
@@ -192,9 +205,23 @@ public class JMSChat extends Application{
 					if(textAreaMessage.getText() != " " && textAreaMessage.getText().length() > 0 ) {
 						TextMessage textMessage = session.createTextMessage();
 						textMessage.setText(textAreaMessage.getText());
-						textMessage.setStringProperty("code", textFieldTo.getText());
-						messageProducer.send(textMessage); 
-						textAreaMessage.clear();
+						if(textFieldTo.getText().length() > 0 && textAreaMessage.getText() != " ") {
+							String[] recievers = textFieldTo.getText().split(";");
+							System.out.println(" length "+recievers.length);
+							if(recievers.length > 1 ) {
+								for(int i = 0; i<recievers.length;i++) {
+									textMessage.setStringProperty("code", recievers[i].trim());
+									messageProducer.send(textMessage);
+									textAreaMessage.clear();
+								}
+							}else {
+								textMessage.setStringProperty("code", textFieldTo.getText());
+								messageProducer.send(textMessage);
+								textAreaMessage.clear();
+							}
+						}else {
+							labelStatus.setText("Select a reciever");
+						}
 					}
 				} catch (JMSException e) {
 					e.printStackTrace();
